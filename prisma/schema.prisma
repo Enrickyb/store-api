@@ -1,0 +1,137 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+model category {
+  id       String     @id @default(uuid())
+  name     String     @unique(map: "name_UNIQUE") @db.VarChar(100)
+  products products[]
+}
+
+model clients {
+  id               String        @id @default(uuid())
+  name             String?       @unique(map: "name_UNIQUE") @db.VarChar(100)
+  logo_url         String?       @db.VarChar(100)
+  active           Boolean       @default(true)
+  created_at       DateTime?     @default(now()) @db.DateTime(0)
+  updated_at       DateTime?     @db.DateTime(0)
+  wallet_client_id String
+  wallet_client    wallet_client @relation(fields: [wallet_client_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_clients_wallet_client1")
+  orders           orders[]
+  user             user[]
+
+  @@index([wallet_client_id], map: "fk_clients_wallet_client1_idx")
+}
+
+model order_items {
+  id           String    @id @default(uuid())
+  orders_id    String
+  products_id  String
+  value        Int?
+  value_logo   Int?
+  value_modify Int?
+  with_logo    Boolean?  @db.TinyInt
+  with_modify  Boolean?  @db.TinyInt
+  value_final  Int?
+  created_at   DateTime? @default(now()) @db.DateTime(0)
+  orders       orders    @relation(fields: [orders_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_order_items_orders1")
+  products     products  @relation(fields: [products_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_order_items_products1")
+
+  @@index([orders_id], map: "fk_order_items_orders1_idx")
+  @@index([products_id], map: "fk_order_items_products1_idx")
+}
+
+model orders {
+  id          String        @id @default(uuid())
+  status      String?       @db.VarChar(100)
+  created_at  DateTime?     @default(now()) @db.DateTime(0)
+  clients_id  String
+  user_id     String
+  value       Int?
+  modify_text String?       @db.Text
+  order_items order_items[]
+  clients     clients       @relation(fields: [clients_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_orders_clients1")
+  user        user          @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_orders_user1")
+
+  @@index([clients_id], map: "fk_orders_clients1_idx")
+  @@index([user_id], map: "fk_orders_user1_idx")
+}
+
+model products {
+  id           String        @id @default(uuid())
+  name         String?       @db.VarChar(100)
+  description  String?       @db.Text
+  file         String?       @db.VarChar(100)
+  thumbnail    String?       @db.VarChar(100)
+  active       Boolean       @default(true)
+  value        Int?
+  value_logo   Int?          @default(0)
+  value_modify Int?          @default(0)
+  category_id  String
+  created_at   DateTime?     @default(now()) @db.DateTime(0)
+  expire_date  DateTime?     @db.DateTime(0)
+  order_items  order_items[]
+  category     category      @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_products_category1")
+
+  @@index([category_id], map: "fk_products_category1_idx")
+}
+
+model user {
+  id                  String                @id @default(uuid())
+  name                String?               @db.VarChar(120)
+  email               String                @unique(map: "user_email_UN") @db.VarChar(120)
+  password            String?               @db.VarChar(120)
+  active              Boolean               @default(true)
+  wallet_id           String
+  client_id           String
+  created_at          DateTime?             @default(now()) @db.DateTime(0)
+  updated_at          DateTime?             @db.DateTime(0)
+  admin               Int                   @default(0)
+  orders              orders[]
+  clients             clients               @relation(fields: [client_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_clients")
+  wallet              wallet                @relation(fields: [wallet_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_user_wallet1")
+  wallet_transactions wallet_transactions[]
+
+  @@index([client_id], map: "fk_user_clients_idx")
+  @@index([wallet_id], map: "fk_user_wallet1_idx")
+}
+
+model wallet {
+  id            String @id @default(uuid())
+  balance       Int?
+  renew_credits Int?
+  user          user[]
+}
+
+model wallet_client {
+  id                  String                @id @default(uuid())
+  balance             Int?
+  clients             clients[]
+  wallet_transactions wallet_transactions[]
+}
+
+model wallet_transactions {
+  id                 String         @id @default(uuid())
+  wallet_destination String?
+  wallet_from        String?
+  user_id            String?
+  value              Int
+  status             String?        @db.VarChar(100)
+  created_at         DateTime?      @default(now()) @db.DateTime(0)
+  updated_at         DateTime?      @db.DateTime(0)
+  by_server          Boolean        @default(false)
+  type               Int            @db.Int
+  user               user?          @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_wallet_transactions_user1")
+  //wallet             wallet?        @relation(fields: [wallet_destination], references: [id], onDelete: NoAction, onUpdate: Cascade, map: "fk_wallet_transactions_wallet1")
+  wallet_client      wallet_client? @relation(fields: [wallet_from], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_wallet_transactions_wallet_client1")
+
+  @@index([user_id], map: "fk_wallet_transactions_user1_idx")
+  @@index([wallet_destination], map: "fk_wallet_transactions_wallet1_idx")
+  @@index([wallet_from], map: "fk_wallet_transactions_wallet_client1_idx")
+}
