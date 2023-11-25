@@ -1,8 +1,6 @@
-Certainly! Below is a template for a comprehensive README file for your Node.js API project using Prisma ORM and Express.js.
+# Store API
 
-# Project Name
 
-Brief description of your project.
 
 ## Table of Contents
 
